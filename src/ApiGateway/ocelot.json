@@ -1,0 +1,28 @@
+{
+  "Routes": [
+    {
+      "UpstreamPathTemplate": "/api/identity/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+      "DownstreamPathTemplate": "/api/v1/identity/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [ { "Host": "identity-service", "Port": 8080 } ]
+    },
+    {
+      "UpstreamPathTemplate": "/api/institute/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+      "DownstreamPathTemplate": "/api/v1/institute/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [ { "Host": "institute-service", "Port": 8080 } ]
+    },
+    {
+      "UpstreamPathTemplate": "/api/billing/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ],
+      "DownstreamPathTemplate": "/api/v1/billing/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [ { "Host": "billing-service", "Port": 8080 } ]
+    }
+  ],
+  "GlobalConfiguration": {
+    "BaseUrl": "http://localhost:5100"
+  }
+}

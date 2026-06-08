@@ -1,0 +1,95 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Coach_App_12345"
+    ports:
+      - "14333:1433"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Coach_App_12345 -C -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27018:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: src/ApiGateway/Dockerfile
+    ports:
+      - "5100:8080"
+    depends_on:
+      - identity-service
+      - institute-service
+      - billing-service
+
+  identity-service:
+    build:
+      context: .
+      dockerfile: src/IdentityService/Dockerfile
+    ports:
+      - "5101:8080"
+    depends_on:
+      - sqlserver
+      - mongodb
+      - rabbitmq
+
+  institute-service:
+    build:
+      context: .
+      dockerfile: src/InstituteService/Dockerfile
+    ports:
+      - "5102:8080"
+    depends_on:
+      - sqlserver
+      - rabbitmq
+
+  billing-service:
+    build:
+      context: .
+      dockerfile: src/BillingService/Dockerfile
+    ports:
+      - "5103:8080"
+    depends_on:
+      - sqlserver
+      - rabbitmq
+      - redis
+
+  notification-worker:
+    build:
+      context: .
+      dockerfile: src/NotificationWorker/Dockerfile
+    depends_on:
+      - rabbitmq
+      - mongodb

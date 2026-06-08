@@ -1,0 +1,8 @@
+bin/
+obj/
+artifacts/
+.nuget-packages/
+.nuget-scratch/
+*.user
+*.suo
+.vs/

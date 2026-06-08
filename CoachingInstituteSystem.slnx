@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ApiGateway/ApiGateway.csproj" />
+    <Project Path="src/BillingService/BillingService.csproj" />
+    <Project Path="src/IdentityService/IdentityService.csproj" />
+    <Project Path="src/InstituteService/InstituteService.csproj" />
+    <Project Path="src/NotificationWorker/NotificationWorker.csproj" />
+    <Project Path="src/SharedKernel/SharedKernel.csproj" />
+  </Folder>
+</Solution>

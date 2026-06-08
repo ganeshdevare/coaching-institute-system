@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)artifacts\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)artifacts\bin\$(MSBuildProjectName)\</BaseOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildThisFileDirectory)artifacts\**</DefaultItemExcludes>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="$(MSBuildThisFileDirectory)artifacts\**\*.cs" />
+    <None Remove="$(MSBuildThisFileDirectory)artifacts\**" />
+    <Content Remove="$(MSBuildThisFileDirectory)artifacts\**" />
+  </ItemGroup>
+</Project>
