@@ -14,6 +14,8 @@ Minimal architecture-rich multi-tenant SaaS backend for revision and learning.
 ## Local URLs
 
 - Gateway: `http://localhost:5100`
+- Swagger/OpenAPI landing page: `http://localhost:5100/swagger`
+- Swagger YAML: `http://localhost:5100/swagger/v1/swagger.yaml`
 - Identity health: `http://localhost:5101/health`
 - Institute health: `http://localhost:5102/health`
 - Billing health: `http://localhost:5103/health`

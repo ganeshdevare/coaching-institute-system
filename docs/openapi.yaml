@@ -1,0 +1,664 @@
+openapi: 3.0.3
+info:
+  title: Coaching Institute Management System API
+  version: 1.0.0
+  description: Minimal multi-tenant SaaS backend API for a coaching institute management learning project.
+servers:
+  - url: http://localhost:5100
+    description: Local API Gateway
+  - url: http://localhost:5101
+    description: Local Identity Service
+  - url: http://localhost:5102
+    description: Local Institute Service
+  - url: http://localhost:5103
+    description: Local Billing Service
+security:
+  - bearerAuth: []
+tags:
+  - name: Gateway
+  - name: Identity
+  - name: Institute
+  - name: Billing
+  - name: Reports
+  - name: Audit
+paths:
+  /:
+    get:
+      tags: [Gateway]
+      summary: Gateway service descriptor
+      security: []
+      responses:
+        "200":
+          description: Gateway metadata and route prefixes.
+  /health:
+    get:
+      tags: [Gateway]
+      summary: Service health check
+      security: []
+      responses:
+        "200":
+          description: Healthy service response.
+  /swagger:
+    get:
+      tags: [Gateway]
+      summary: Simple Swagger landing page
+      security: []
+      responses:
+        "200":
+          description: HTML page linking to the OpenAPI YAML.
+  /swagger/v1/swagger.yaml:
+    get:
+      tags: [Gateway]
+      summary: OpenAPI YAML document
+      security: []
+      responses:
+        "200":
+          description: OpenAPI YAML.
+          content:
+            application/yaml:
+              schema:
+                type: string
+  /api/identity/institutes/register:
+    post:
+      tags: [Identity]
+      summary: Register an institute and owner account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInstituteRequest"
+      responses:
+        "200":
+          description: Institute registered.
+  /api/identity/login:
+    post:
+      tags: [Identity]
+      summary: Login and receive access and refresh tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful.
+        "400":
+          description: Invalid credentials or inactive account.
+  /api/identity/refresh:
+    post:
+      tags: [Identity]
+      summary: Refresh an access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: Token refreshed.
+  /api/identity/invitations:
+    post:
+      tags: [Identity]
+      summary: Invite a tenant-scoped user
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteUserRequest"
+      responses:
+        "200":
+          description: Invitation created.
+        "403":
+          description: Caller is not authorized.
+  /api/identity/password/change:
+    post:
+      tags: [Identity]
+      summary: Change current user password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "200":
+          description: Password changed.
+  /api/identity/password/reset:
+    post:
+      tags: [Identity]
+      summary: Generate a mock password reset token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Mock reset token generated.
+  /api/identity/me:
+    get:
+      tags: [Identity]
+      summary: Current user profile claims
+      responses:
+        "200":
+          description: Current user claims.
+        "401":
+          description: Not authenticated.
+  /api/identity/audit/search:
+    get:
+      tags: [Audit]
+      summary: Search API audit logs
+      parameters:
+        - name: path
+          in: query
+          schema:
+            type: string
+        - name: correlationId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching audit logs.
+  /api/institute/tenant:
+    get:
+      tags: [Institute]
+      summary: Resolve current tenant from subdomain header or host
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      responses:
+        "200":
+          description: Tenant resolution result.
+  /api/institute/branches:
+    post:
+      tags: [Institute]
+      summary: Create a branch
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchRequest"
+      responses:
+        "200":
+          description: Created branch.
+  /api/institute/courses:
+    post:
+      tags: [Institute]
+      summary: Create a course
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CourseRequest"
+      responses:
+        "200":
+          description: Created course.
+  /api/institute/batches:
+    post:
+      tags: [Institute]
+      summary: Create a batch and optionally assign a teacher
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchRequest"
+      responses:
+        "200":
+          description: Created batch.
+  /api/institute/students/enroll:
+    post:
+      tags: [Institute]
+      summary: Enroll a student into a batch
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnrollRequest"
+      responses:
+        "200":
+          description: Enrollment created.
+  /api/institute/guardians:
+    post:
+      tags: [Institute]
+      summary: Map a student to a parent or guardian
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GuardianRequest"
+      responses:
+        "200":
+          description: Guardian mapping created.
+  /api/institute/attendance:
+    post:
+      tags: [Institute]
+      summary: Mark batch-wise attendance
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttendanceRequest"
+      responses:
+        "200":
+          description: Attendance marked and low attendance events queued when applicable.
+  /api/institute/attendance/summary:
+    get:
+      tags: [Institute]
+      summary: Attendance summary for a batch
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+        - name: batchId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Attendance summary grouped by student.
+  /api/institute/dashboard:
+    get:
+      tags: [Institute]
+      summary: Admin dashboard aggregates
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      responses:
+        "200":
+          description: Student, batch, fee, attendance, and recent payment metrics.
+  /api/billing/fee-plans:
+    post:
+      tags: [Billing]
+      summary: Create a fee plan
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeePlanRequest"
+      responses:
+        "200":
+          description: Fee plan created.
+  /api/billing/payments:
+    post:
+      tags: [Billing]
+      summary: Record a payment
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentRequest"
+      responses:
+        "200":
+          description: Payment recorded or idempotent duplicate returned.
+  /api/billing/payments/webhook/mock:
+    post:
+      tags: [Billing]
+      summary: Mock payment provider webhook
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MockPaymentWebhook"
+      responses:
+        "200":
+          description: Mock webhook processed idempotently.
+  /api/billing/refunds:
+    post:
+      tags: [Billing]
+      summary: Process a partial or full refund
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefundRequest"
+      responses:
+        "200":
+          description: Refund processed.
+  /api/billing/students/{studentId}/history:
+    get:
+      tags: [Billing]
+      summary: Billing history and credit balance for a student
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Billing history.
+  /api/billing/payments/{paymentId}/receipt.pdf:
+    get:
+      tags: [Billing]
+      summary: Download a PDF receipt for a payment
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: PDF receipt.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+  /api/billing/reports:
+    post:
+      tags: [Reports]
+      summary: Queue an async report job
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportRequest"
+      responses:
+        "200":
+          description: Report job queued.
+  /api/billing/reports/{reportId}:
+    get:
+      tags: [Reports]
+      summary: Get async report job status
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Report job status.
+        "404":
+          description: Report not found.
+  /api/billing/reminders:
+    post:
+      tags: [Billing]
+      summary: Queue a fee reminder notification event
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeeReminderRequest"
+      responses:
+        "200":
+          description: Reminder queued.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TenantSubdomain:
+      name: X-Tenant-Subdomain
+      in: header
+      required: false
+      schema:
+        type: string
+        example: brightclasses
+      description: Tenant subdomain fallback when not using a host like brightclasses.coachapp.local.
+  schemas:
+    RegisterInstituteRequest:
+      type: object
+      required: [name, subdomain, ownerEmail, ownerName, password]
+      properties:
+        name:
+          type: string
+          example: Bright Classes
+        subdomain:
+          type: string
+          example: brightclasses
+        ownerEmail:
+          type: string
+          format: email
+          example: owner@brightclasses.local
+        ownerName:
+          type: string
+          example: Bright Owner
+        password:
+          type: string
+          format: password
+          example: Owner@123
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+    InviteUserRequest:
+      type: object
+      required: [email, displayName, role]
+      properties:
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [InstituteOwner, InstituteAdmin, Teacher, Student, Parent]
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          format: password
+        newPassword:
+          type: string
+          format: password
+    ResetPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    BranchRequest:
+      type: object
+      required: [name, address]
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+    CourseRequest:
+      type: object
+      required: [name, code]
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+    BatchRequest:
+      type: object
+      required: [courseId, name, startDate]
+      properties:
+        courseId:
+          type: string
+          format: uuid
+        teacherId:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    EnrollRequest:
+      type: object
+      required: [batchId, studentId]
+      properties:
+        batchId:
+          type: string
+          format: uuid
+        studentId:
+          type: string
+          format: uuid
+    GuardianRequest:
+      type: object
+      required: [studentId, parentId, relationship]
+      properties:
+        studentId:
+          type: string
+          format: uuid
+        parentId:
+          type: string
+          format: uuid
+        relationship:
+          type: string
+          example: Father
+    AttendanceRequest:
+      type: object
+      required: [batchId, classDate, students]
+      properties:
+        batchId:
+          type: string
+          format: uuid
+        classDate:
+          type: string
+          format: date
+        students:
+          type: object
+          additionalProperties:
+            type: boolean
+          example:
+            "11111111-1111-1111-1111-111111111111": true
+    FeePlanRequest:
+      type: object
+      required: [courseId, name, amount, installments]
+      properties:
+        courseId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        amount:
+          type: number
+          format: decimal
+        installments:
+          type: integer
+          minimum: 1
+    PaymentRequest:
+      type: object
+      required: [studentId, amount, mode, idempotencyKey]
+      properties:
+        studentId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: decimal
+        mode:
+          type: string
+          example: Cash
+        idempotencyKey:
+          type: string
+    MockPaymentWebhook:
+      type: object
+      required: [studentId, amount, providerReference, idempotencyKey]
+      properties:
+        studentId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: decimal
+        providerReference:
+          type: string
+        idempotencyKey:
+          type: string
+    RefundRequest:
+      type: object
+      required: [paymentId, amount, reason]
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: decimal
+        reason:
+          type: string
+    ReportRequest:
+      type: object
+      required: [reportType]
+      properties:
+        reportType:
+          type: string
+          enum: [FeeReceipt, OutstandingFees, AttendanceSummary, ExcelExport]
+    FeeReminderRequest:
+      type: object
+      required: [studentId]
+      properties:
+        studentId:
+          type: string
+          format: uuid

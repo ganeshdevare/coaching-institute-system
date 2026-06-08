@@ -21,10 +21,29 @@ app.MapGet("/", () => ApiResponse<object>.Ok(new
 {
     name = "Coaching Institute Management System Gateway",
     routes = routes.Keys,
+    swagger = "/swagger/v1/swagger.yaml",
     sampleTenantHosts = new[] { "brightclasses.coachapp.local", "apexacademy.coachapp.local" }
 }));
 
 app.MapHealthChecks("/health");
+
+app.MapGet("/swagger", () => Results.Content("""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Coaching Institute Management System API</title>
+</head>
+<body>
+  <h1>Coaching Institute Management System API</h1>
+  <p>OpenAPI YAML: <a href="/swagger/v1/swagger.yaml">/swagger/v1/swagger.yaml</a></p>
+  <p>Alias: <a href="/openapi.yaml">/openapi.yaml</a></p>
+</body>
+</html>
+""", "text/html"));
+
+app.MapGet("/swagger/v1/swagger.yaml", () => Results.Text(ReadOpenApiYaml(), "application/yaml"));
+app.MapGet("/openapi.yaml", () => Results.Text(ReadOpenApiYaml(), "application/yaml"));
 
 app.Map("/{**path}", async (HttpContext context, IHttpClientFactory clientFactory) =>
 {
@@ -66,3 +85,23 @@ app.Map("/{**path}", async (HttpContext context, IHttpClientFactory clientFactor
 });
 
 app.Run();
+
+static string ReadOpenApiYaml()
+{
+    var current = new DirectoryInfo(AppContext.BaseDirectory);
+    while (current is not null)
+    {
+        var candidate = Path.Combine(current.FullName, "docs", "openapi.yaml");
+        if (File.Exists(candidate))
+        {
+            return File.ReadAllText(candidate);
+        }
+
+        current = current.Parent;
+    }
+
+    var workspaceCandidate = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "docs", "openapi.yaml"));
+    return File.Exists(workspaceCandidate)
+        ? File.ReadAllText(workspaceCandidate)
+        : "openapi: 3.0.3\ninfo:\n  title: Coaching Institute Management System API\n  version: 1.0.0\npaths: {}\n";
+}
