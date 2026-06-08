@@ -1,10 +1,20 @@
 using InstituteService.Models;
+using InstituteService.Repositories;
 using SharedKernel;
 
 namespace InstituteService.Services;
 
-public sealed class InstituteAppService(AppDataStore store, IEventPublisher events) : IInstituteAppService
+public sealed class InstituteAppService : BaseService, IInstituteAppService
 {
+    private readonly IInstituteRepository instituteRepository;
+    private readonly IEventPublisher events;
+
+    public InstituteAppService(IServiceProvider serviceProvider) : base(serviceProvider)
+    {
+        instituteRepository = GetService<IInstituteRepository>();
+        events = GetService<IEventPublisher>();
+    }
+
     public bool RequireTenant(HttpContext http, out TenantContext tenant)
     {
         tenant = (TenantContext?)http.Items["Tenant"] ?? new TenantContext(null, null, false);
@@ -12,60 +22,52 @@ public sealed class InstituteAppService(AppDataStore store, IEventPublisher even
     }
 
     public IEnumerable<Branch> ListBranches(TenantContext tenant)
-        => store.Branches.Values.Where(x => x.InstituteId == tenant.InstituteId).OrderBy(x => x.Name);
+        => instituteRepository.ListBranches(tenant.InstituteId!.Value);
 
     public Branch CreateBranch(TenantContext tenant, BranchRequest request)
     {
         var branch = new Branch(Guid.NewGuid(), tenant.InstituteId!.Value, request.Name, request.Address, true);
-        store.Branches[branch.Id] = branch;
+        instituteRepository.AddBranch(branch);
         return branch;
     }
 
     public IEnumerable<Course> ListCourses(TenantContext tenant)
-        => store.Courses.Values.Where(x => x.InstituteId == tenant.InstituteId).OrderBy(x => x.Name);
+        => instituteRepository.ListCourses(tenant.InstituteId!.Value);
 
     public Course CreateCourse(TenantContext tenant, CourseRequest request)
     {
         var course = new Course(Guid.NewGuid(), tenant.InstituteId!.Value, request.Name, request.Code, true);
-        store.Courses[course.Id] = course;
+        instituteRepository.AddCourse(course);
         return course;
     }
 
     public IEnumerable<Batch> ListBatches(TenantContext tenant)
-        => store.Batches.Values.Where(x => x.InstituteId == tenant.InstituteId).OrderBy(x => x.StartDate).ThenBy(x => x.Name);
+        => instituteRepository.ListBatches(tenant.InstituteId!.Value);
 
     public Batch CreateBatch(TenantContext tenant, BatchRequest request)
     {
         var batch = new Batch(Guid.NewGuid(), tenant.InstituteId!.Value, request.CourseId, request.TeacherId, request.Name, request.StartDate, request.EndDate, true);
-        store.Batches[batch.Id] = batch;
+        instituteRepository.AddBatch(batch);
         return batch;
     }
 
     public IEnumerable<Enrollment> ListEnrollments(TenantContext tenant, Guid? batchId, Guid? studentId)
-        => store.Enrollments.Values
-            .Where(x => x.InstituteId == tenant.InstituteId)
-            .Where(x => !batchId.HasValue || x.BatchId == batchId)
-            .Where(x => !studentId.HasValue || x.StudentId == studentId)
-            .OrderByDescending(x => x.Id);
+        => instituteRepository.ListEnrollments(tenant.InstituteId!.Value, batchId, studentId);
 
     public object Enroll(TenantContext tenant, EnrollRequest request)
     {
         var enrollment = new Enrollment(Guid.NewGuid(), tenant.InstituteId!.Value, request.BatchId, request.StudentId, "Active");
-        store.Enrollments[enrollment.Id] = enrollment;
+        instituteRepository.AddEnrollment(enrollment);
         return enrollment;
     }
 
     public IEnumerable<GuardianMap> ListGuardianMaps(TenantContext tenant, Guid? studentId, Guid? parentId)
-        => store.GuardianMaps.Values
-            .Where(x => x.InstituteId == tenant.InstituteId)
-            .Where(x => !studentId.HasValue || x.StudentId == studentId)
-            .Where(x => !parentId.HasValue || x.ParentId == parentId)
-            .OrderBy(x => x.Relationship);
+        => instituteRepository.ListGuardianMaps(tenant.InstituteId!.Value, studentId, parentId);
 
     public GuardianMap MapGuardian(TenantContext tenant, GuardianRequest request)
     {
         var map = new GuardianMap(Guid.NewGuid(), tenant.InstituteId!.Value, request.StudentId, request.ParentId, request.Relationship);
-        store.GuardianMaps[map.Id] = map;
+        instituteRepository.AddGuardianMap(map);
         return map;
     }
 
@@ -74,7 +76,7 @@ public sealed class InstituteAppService(AppDataStore store, IEventPublisher even
         foreach (var student in request.Students)
         {
             var row = new Attendance(Guid.NewGuid(), tenant.InstituteId!.Value, request.BatchId, student.Key, request.ClassDate, student.Value);
-            store.Attendance[row.Id] = row;
+            instituteRepository.AddAttendance(row);
         }
 
         var lowAttendance = AttendanceSummary(tenant, request.BatchId)
@@ -92,8 +94,7 @@ public sealed class InstituteAppService(AppDataStore store, IEventPublisher even
 
     public IEnumerable<dynamic> AttendanceSummary(TenantContext tenant, Guid batchId)
     {
-        return store.Attendance.Values
-            .Where(x => x.InstituteId == tenant.InstituteId && x.BatchId == batchId)
+        return instituteRepository.ListAttendance(tenant.InstituteId!.Value, batchId)
             .GroupBy(x => x.StudentId)
             .Select(g => new
             {
@@ -106,21 +107,6 @@ public sealed class InstituteAppService(AppDataStore store, IEventPublisher even
 
     public object Dashboard(TenantContext tenant)
     {
-        var instituteId = tenant.InstituteId!.Value;
-        var studentIds = store.Enrollments.Values.Where(x => x.InstituteId == instituteId && x.Status == "Active").Select(x => x.StudentId).Distinct().ToList();
-        var payments = store.Payments.Values.Where(x => x.InstituteId == instituteId && x.Status == "Completed").ToList();
-        var lowAttendance = store.Attendance.Values.Where(x => x.InstituteId == instituteId)
-            .GroupBy(x => x.StudentId)
-            .Count(g => g.Any() && g.Count(x => x.IsPresent) * 100m / g.Count() < 75m);
-
-        return new
-        {
-            totalStudents = studentIds.Count,
-            activeBatches = store.Batches.Values.Count(x => x.InstituteId == instituteId && x.IsActive),
-            feesCollected = payments.Sum(x => x.Amount - x.RefundedAmount),
-            pendingFees = store.FeePlans.Values.Where(x => x.InstituteId == instituteId).Sum(x => x.Amount) - payments.Sum(x => x.Amount - x.RefundedAmount),
-            lowAttendanceStudents = lowAttendance,
-            recentPayments = payments.OrderByDescending(x => x.CreatedUtc).Take(5)
-        };
+        return instituteRepository.Dashboard(tenant.InstituteId!.Value);
     }
 }

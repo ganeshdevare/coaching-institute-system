@@ -11,7 +11,7 @@ Minimal architecture-rich multi-tenant SaaS backend for revision and learning.
 - `NotificationWorker`: mock consumer for payment, refund, low attendance, fee reminder, and report events.
 - `SharedKernel`: response models, tenant/correlation/audit middleware, JWT utilities, event contracts, in-memory repository.
 
-The API services follow the same broad shape as the reference repos: thin `Program.cs`, `Controllers/` for HTTP endpoints, `Services/` for application logic, `Models/` for request contracts, and shared infrastructure in `SharedKernel`.
+The API services now follow the KBKG-style shape from the reference repos: class-based `Program.cs` with `ConfigureServices` / `ConfigureApp`, `Dependencies.cs` as the composition root, explicit constructor-injected `Controllers/`, `Services/` over `Repositories/`, `Models/`, `Constants/`, `Enums/`, and shared infrastructure in `SharedKernel`.
 
 ## Local URLs
 

@@ -7,8 +7,15 @@ namespace InstituteService.Controllers;
 
 [ApiController]
 [Route("api/v1/institute/courses")]
-public sealed class CoursesController(IInstituteAppService service) : ControllerBase
+public sealed class CoursesController : ControllerBase
 {
+    private readonly IInstituteAppService service;
+
+    public CoursesController(IInstituteAppService service)
+    {
+        this.service = service;
+    }
+
     [HttpGet]
     public IActionResult List()
         => service.RequireTenant(HttpContext, out var tenant)

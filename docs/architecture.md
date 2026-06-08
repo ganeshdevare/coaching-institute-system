@@ -4,8 +4,10 @@ This is a generic learning project inspired by the structure of the KBKG service
 
 Patterns reused conceptually:
 
-- Thin service startup with service registration in one place.
-- Controller-service project slices with request models separated from HTTP actions.
+- Class-based service startup with `ConfigureServices` and `ConfigureApp`, matching the reference repos.
+- `Dependencies.cs` per service as the composition root for service and repository registration.
+- Controller-service-repository project slices with request models separated from HTTP actions.
+- Explicit constructor injection in controllers, mirroring the KBKG controller style.
 - API Gateway front door and service-specific downstream APIs.
 - Shared response envelope, auth helpers, middleware, and event contracts.
 - Tenant resolution before business endpoints execute.

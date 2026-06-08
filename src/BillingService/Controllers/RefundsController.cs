@@ -7,8 +7,15 @@ namespace BillingService.Controllers;
 
 [ApiController]
 [Route("api/v1/billing/refunds")]
-public sealed class RefundsController(IBillingAppService service) : ControllerBase
+public sealed class RefundsController : ControllerBase
 {
+    private readonly IBillingAppService service;
+
+    public RefundsController(IBillingAppService service)
+    {
+        this.service = service;
+    }
+
     [HttpPost]
     public IActionResult Refund(RefundRequest request)
         => service.RequireTenant(HttpContext, out var tenant)

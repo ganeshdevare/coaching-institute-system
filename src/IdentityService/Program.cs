@@ -1,18 +1,46 @@
 using IdentityService.Services;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using SharedKernel;
+using System.Text.Json.Serialization;
 
-var builder = WebApplication.CreateBuilder(args);
+namespace IdentityService;
 
-builder.Services.AddCoachSharedKernel(builder.Configuration);
-builder.Services.AddScoped<IIdentityAppService, IdentityAppService>();
-builder.Services.AddControllers();
-builder.Services.AddHealthChecks();
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-var app = builder.Build();
+        builder.Configuration.ConfigureApp();
 
-app.UseCoachPlatform();
-SeedData.Ensure(app.Services);
+        ConfigureServices(builder);
+        ConfigureApp(builder);
+    }
 
-app.MapControllers();
-app.MapHealthChecks("/health");
-app.Run();
+    private static void ConfigureServices(WebApplicationBuilder builder)
+    {
+        builder.Services.AddCoachSharedKernel(builder.Configuration);
+        builder.Services.AddDependencies(builder.Configuration);
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddControllers().AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        });
+        builder.Services.AddHealthChecks();
+        builder.Services.Configure<KestrelServerOptions>(options =>
+        {
+            options.Limits.MaxRequestBodySize = null;
+        });
+    }
+
+    private static void ConfigureApp(WebApplicationBuilder builder)
+    {
+        WebApplication app = builder.Build();
+
+        app.UseCoachPlatform();
+        SeedData.Ensure(app.Services);
+        app.MapControllers();
+        app.MapHealthChecks("/health");
+        app.Run();
+    }
+}

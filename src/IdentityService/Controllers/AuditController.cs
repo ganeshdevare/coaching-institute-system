@@ -1,21 +1,23 @@
 using Microsoft.AspNetCore.Mvc;
 using SharedKernel;
+using IdentityService.Repositories;
 
 namespace IdentityService.Controllers;
 
 [ApiController]
 [Route("api/v1/identity/audit")]
-public sealed class AuditController(AppDataStore store) : ControllerBase
+public sealed class AuditController : ControllerBase
 {
+    private readonly IAuditLogRepository auditLogRepository;
+
+    public AuditController(IAuditLogRepository auditLogRepository)
+    {
+        this.auditLogRepository = auditLogRepository;
+    }
+
     [HttpGet("search")]
     public IActionResult Search([FromQuery] string? path, [FromQuery] string? correlationId)
     {
-        var data = store.AuditLogs.Values
-            .Where(x => string.IsNullOrWhiteSpace(path) || x.Path.Contains(path, StringComparison.OrdinalIgnoreCase))
-            .Where(x => string.IsNullOrWhiteSpace(correlationId) || x.CorrelationId == correlationId)
-            .OrderByDescending(x => x.CreatedUtc)
-            .Take(100);
-
-        return Ok(ApiResponse<IEnumerable<AuditLog>>.Ok(data));
+        return Ok(ApiResponse<IEnumerable<AuditLog>>.Ok(auditLogRepository.Search(path, correlationId)));
     }
 }

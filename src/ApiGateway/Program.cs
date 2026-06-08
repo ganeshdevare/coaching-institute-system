@@ -1,19 +1,45 @@
-using ApiGateway.Services;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using SharedKernel;
+using System.Text.Json.Serialization;
 
-var builder = WebApplication.CreateBuilder(args);
+namespace ApiGateway;
 
-builder.Configuration.AddJsonFile("ocelot.json", optional: true, reloadOnChange: true);
-builder.Services.AddCoachSharedKernel(builder.Configuration);
-builder.Services.AddHttpClient();
-builder.Services.AddScoped<IGatewayProxyService, GatewayProxyService>();
-builder.Services.AddScoped<IOpenApiDocumentService, OpenApiDocumentService>();
-builder.Services.AddControllers();
-builder.Services.AddHealthChecks();
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-var app = builder.Build();
+        builder.Configuration.ConfigureApp();
 
-app.UseCoachPlatform();
-app.MapControllers();
-app.MapHealthChecks("/health");
-app.Run();
+        ConfigureServices(builder);
+        ConfigureApp(builder);
+    }
+
+    private static void ConfigureServices(WebApplicationBuilder builder)
+    {
+        builder.Services.AddCoachSharedKernel(builder.Configuration);
+        builder.Services.AddHttpClient();
+        builder.Services.AddDependencies(builder.Configuration);
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddControllers().AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        });
+        builder.Services.AddHealthChecks();
+        builder.Services.Configure<KestrelServerOptions>(options =>
+        {
+            options.Limits.MaxRequestBodySize = null;
+        });
+    }
+
+    private static void ConfigureApp(WebApplicationBuilder builder)
+    {
+        WebApplication app = builder.Build();
+
+        app.UseCoachPlatform();
+        app.MapControllers();
+        app.MapHealthChecks("/health");
+        app.Run();
+    }
+}

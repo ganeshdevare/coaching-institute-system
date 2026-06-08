@@ -6,8 +6,15 @@ namespace BillingService.Controllers;
 
 [ApiController]
 [Route("api/v1/billing/notifications")]
-public sealed class NotificationsController(IBillingAppService service) : ControllerBase
+public sealed class NotificationsController : ControllerBase
 {
+    private readonly IBillingAppService service;
+
+    public NotificationsController(IBillingAppService service)
+    {
+        this.service = service;
+    }
+
     [HttpGet]
     public IActionResult List()
         => service.RequireTenant(HttpContext, out var tenant)

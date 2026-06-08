@@ -5,8 +5,15 @@ using SharedKernel;
 namespace ApiGateway.Controllers;
 
 [ApiController]
-public sealed class GatewayController(IGatewayProxyService proxyService) : ControllerBase
+public sealed class GatewayController : ControllerBase
 {
+    private readonly IGatewayProxyService proxyService;
+
+    public GatewayController(IGatewayProxyService proxyService)
+    {
+        this.proxyService = proxyService;
+    }
+
     [HttpGet("/")]
     public IActionResult Index()
         => Ok(ApiResponse<object>.Ok(new

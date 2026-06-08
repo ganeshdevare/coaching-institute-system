@@ -7,8 +7,15 @@ namespace BillingService.Controllers;
 
 [ApiController]
 [Route("api/v1/billing/fee-plans")]
-public sealed class FeePlansController(IBillingAppService service) : ControllerBase
+public sealed class FeePlansController : ControllerBase
 {
+    private readonly IBillingAppService service;
+
+    public FeePlansController(IBillingAppService service)
+    {
+        this.service = service;
+    }
+
     [HttpGet]
     public IActionResult List()
         => service.RequireTenant(HttpContext, out var tenant)

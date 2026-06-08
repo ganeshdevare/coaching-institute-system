@@ -7,8 +7,15 @@ namespace InstituteService.Controllers;
 
 [ApiController]
 [Route("api/v1/institute/branches")]
-public sealed class BranchesController(IInstituteAppService service) : ControllerBase
+public sealed class BranchesController : ControllerBase
 {
+    private readonly IInstituteAppService service;
+
+    public BranchesController(IInstituteAppService service)
+    {
+        this.service = service;
+    }
+
     [HttpGet]
     public IActionResult List()
         => service.RequireTenant(HttpContext, out var tenant)

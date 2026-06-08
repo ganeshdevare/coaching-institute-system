@@ -7,8 +7,15 @@ namespace IdentityService.Controllers;
 
 [ApiController]
 [Route("api/v1/identity/institutes")]
-public sealed class InstitutesController(IIdentityAppService service) : ControllerBase
+public sealed class InstitutesController : ControllerBase
 {
+    private readonly IIdentityAppService service;
+
+    public InstitutesController(IIdentityAppService service)
+    {
+        this.service = service;
+    }
+
     [HttpGet]
     public IActionResult List()
         => Ok(ApiResponse<IEnumerable<Institute>>.Ok(service.ListInstitutes()));

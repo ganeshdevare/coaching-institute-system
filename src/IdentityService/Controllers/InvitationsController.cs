@@ -7,8 +7,15 @@ namespace IdentityService.Controllers;
 
 [ApiController]
 [Route("api/v1/identity/invitations")]
-public sealed class InvitationsController(IIdentityAppService service) : ControllerBase
+public sealed class InvitationsController : ControllerBase
 {
+    private readonly IIdentityAppService service;
+
+    public InvitationsController(IIdentityAppService service)
+    {
+        this.service = service;
+    }
+
     [HttpPost]
     public IActionResult Invite(InviteUserRequest request)
         => IsAuthorized(Roles.InstituteOwner, Roles.InstituteAdmin, Roles.SuperAdmin)

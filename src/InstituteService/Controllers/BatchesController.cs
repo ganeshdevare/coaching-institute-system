@@ -7,8 +7,15 @@ namespace InstituteService.Controllers;
 
 [ApiController]
 [Route("api/v1/institute/batches")]
-public sealed class BatchesController(IInstituteAppService service) : ControllerBase
+public sealed class BatchesController : ControllerBase
 {
+    private readonly IInstituteAppService service;
+
+    public BatchesController(IInstituteAppService service)
+    {
+        this.service = service;
+    }
+
     [HttpGet]
     public IActionResult List()
         => service.RequireTenant(HttpContext, out var tenant)

@@ -1,11 +1,23 @@
 using System.Text;
 using BillingService.Models;
+using BillingService.Repositories;
 using SharedKernel;
 
 namespace BillingService.Services;
 
-public sealed class BillingAppService(AppDataStore store, IEventPublisher events, IClock clock) : IBillingAppService
+public sealed class BillingAppService : BaseService, IBillingAppService
 {
+    private readonly IBillingRepository billingRepository;
+    private readonly IEventPublisher events;
+    private readonly IClock clock;
+
+    public BillingAppService(IServiceProvider serviceProvider) : base(serviceProvider)
+    {
+        billingRepository = GetService<IBillingRepository>();
+        events = GetService<IEventPublisher>();
+        clock = GetService<IClock>();
+    }
+
     public bool RequireTenant(HttpContext http, out TenantContext tenant)
     {
         tenant = (TenantContext?)http.Items["Tenant"] ?? new TenantContext(null, null, false);
@@ -13,30 +25,27 @@ public sealed class BillingAppService(AppDataStore store, IEventPublisher events
     }
 
     public IEnumerable<FeePlan> ListFeePlans(TenantContext tenant)
-        => store.FeePlans.Values.Where(x => x.InstituteId == tenant.InstituteId).OrderBy(x => x.Name);
+        => billingRepository.ListFeePlans(tenant.InstituteId!.Value);
 
     public FeePlan CreateFeePlan(TenantContext tenant, FeePlanRequest request)
     {
         var plan = new FeePlan(Guid.NewGuid(), tenant.InstituteId!.Value, request.CourseId, request.Name, request.Amount, request.Installments, true);
-        store.FeePlans[plan.Id] = plan;
+        billingRepository.AddFeePlan(plan);
         return plan;
     }
 
     public IEnumerable<Payment> ListPayments(TenantContext tenant, Guid? studentId)
-        => store.Payments.Values
-            .Where(x => x.InstituteId == tenant.InstituteId)
-            .Where(x => !studentId.HasValue || x.StudentId == studentId)
-            .OrderByDescending(x => x.CreatedUtc);
+        => billingRepository.ListPayments(tenant.InstituteId!.Value, studentId);
 
     public object RecordPayment(TenantContext tenant, PaymentRequest request)
     {
-        if (store.Payments.Values.Any(x => x.IdempotencyKey == request.IdempotencyKey))
+        if (billingRepository.GetPaymentByIdempotencyKey(request.IdempotencyKey) is { } existing)
         {
-            return new { duplicate = true, payment = store.Payments.Values.First(x => x.IdempotencyKey == request.IdempotencyKey) };
+            return new { duplicate = true, payment = existing };
         }
 
         var payment = new Payment(Guid.NewGuid(), tenant.InstituteId!.Value, request.StudentId, request.Amount, 0, request.Mode, "Completed", request.IdempotencyKey, clock.UtcNow);
-        store.Payments[payment.Id] = payment;
+        billingRepository.AddPayment(payment);
         events.Publish(tenant.InstituteId, EventNames.PaymentReceived, new { payment.Id, payment.StudentId, payment.Amount });
         return new { duplicate = false, payment };
     }
@@ -46,7 +55,8 @@ public sealed class BillingAppService(AppDataStore store, IEventPublisher events
 
     public object Refund(TenantContext tenant, RefundRequest request)
     {
-        if (!store.Payments.TryGetValue(request.PaymentId, out var payment) || payment.InstituteId != tenant.InstituteId)
+        var payment = billingRepository.GetPayment(request.PaymentId);
+        if (payment is null || payment.InstituteId != tenant.InstituteId)
         {
             throw new InvalidOperationException("Payment not found.");
         }
@@ -62,22 +72,22 @@ public sealed class BillingAppService(AppDataStore store, IEventPublisher events
             Status = payment.RefundedAmount + request.Amount == payment.Amount ? "Refunded" : "PartiallyRefunded"
         };
 
-        store.Payments[payment.Id] = updated;
+        billingRepository.UpdatePayment(updated);
         events.Publish(tenant.InstituteId, EventNames.RefundProcessed, new { payment.Id, request.Amount, request.Reason });
         return updated;
     }
 
     public object BillingHistory(TenantContext tenant, Guid studentId)
-    {
-        var paid = store.Payments.Values.Where(x => x.InstituteId == tenant.InstituteId && x.StudentId == studentId).ToList();
-        var planned = store.FeePlans.Values.Where(x => x.InstituteId == tenant.InstituteId).Sum(x => x.Amount);
-        var netPaid = paid.Sum(x => x.Amount - x.RefundedAmount);
-        return new { studentId, planned, netPaid, pending = Math.Max(0, planned - netPaid), creditBalance = Math.Max(0, netPaid - planned), payments = paid };
-    }
+        => billingRepository.BillingHistory(tenant.InstituteId!.Value, studentId);
 
     public byte[] ReceiptPdf(TenantContext tenant, Guid paymentId)
     {
-        var payment = store.Payments.Values.FirstOrDefault(x => x.Id == paymentId && x.InstituteId == tenant.InstituteId) ?? throw new InvalidOperationException("Payment not found.");
+        var payment = billingRepository.GetPayment(paymentId);
+        if (payment is null || payment.InstituteId != tenant.InstituteId)
+        {
+            throw new InvalidOperationException("Payment not found.");
+        }
+
         var body = $"Receipt\nPayment: {payment.Id}\nStudent: {payment.StudentId}\nAmount: {payment.Amount}\nDate: {payment.CreatedUtc:O}";
         return Encoding.ASCII.GetBytes("%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 0>>endobj\n% " + body + "\n%%EOF");
     }
@@ -85,18 +95,18 @@ public sealed class BillingAppService(AppDataStore store, IEventPublisher events
     public ReportJob RequestReport(TenantContext tenant, ReportRequest request)
     {
         var report = new ReportJob(Guid.NewGuid(), tenant.InstituteId!.Value, request.ReportType, "Queued", null, clock.UtcNow);
-        store.ReportJobs[report.Id] = report;
+        billingRepository.AddReport(report);
         events.Publish(tenant.InstituteId, EventNames.ReportRequested, new { report.Id, report.ReportType });
         return report;
     }
 
     public IEnumerable<ReportJob> ListReports(TenantContext tenant)
-        => store.ReportJobs.Values.Where(x => x.InstituteId == tenant.InstituteId).OrderByDescending(x => x.CreatedUtc);
+        => billingRepository.ListReports(tenant.InstituteId!.Value);
 
-    public ReportJob? GetReport(Guid reportId) => store.ReportJobs.GetValueOrDefault(reportId);
+    public ReportJob? GetReport(Guid reportId) => billingRepository.GetReport(reportId);
 
     public IEnumerable<NotificationRecord> ListNotifications(TenantContext tenant)
-        => store.Notifications.Values.Where(x => x.InstituteId == tenant.InstituteId).OrderByDescending(x => x.CreatedUtc);
+        => billingRepository.ListNotifications(tenant.InstituteId!.Value);
 
     public object RequestReminder(TenantContext tenant, FeeReminderRequest request)
     {

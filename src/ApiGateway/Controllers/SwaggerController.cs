@@ -4,8 +4,15 @@ using Microsoft.AspNetCore.Mvc;
 namespace ApiGateway.Controllers;
 
 [ApiController]
-public sealed class SwaggerController(IOpenApiDocumentService openApi) : ControllerBase
+public sealed class SwaggerController : ControllerBase
 {
+    private readonly IOpenApiDocumentService openApi;
+
+    public SwaggerController(IOpenApiDocumentService openApi)
+    {
+        this.openApi = openApi;
+    }
+
     [HttpGet("/swagger")]
     public ContentResult Index()
         => Content("""

@@ -7,8 +7,15 @@ namespace IdentityService.Controllers;
 
 [ApiController]
 [Route("api/v1/identity")]
-public sealed class AuthController(IIdentityAppService service) : ControllerBase
+public sealed class AuthController : ControllerBase
 {
+    private readonly IIdentityAppService service;
+
+    public AuthController(IIdentityAppService service)
+    {
+        this.service = service;
+    }
+
     [HttpPost("login")]
     public IActionResult Login(LoginRequest request)
         => service.Login(request) is { } result

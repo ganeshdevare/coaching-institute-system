@@ -6,8 +6,15 @@ namespace InstituteService.Controllers;
 
 [ApiController]
 [Route("api/v1/institute/dashboard")]
-public sealed class DashboardController(IInstituteAppService service) : ControllerBase
+public sealed class DashboardController : ControllerBase
 {
+    private readonly IInstituteAppService service;
+
+    public DashboardController(IInstituteAppService service)
+    {
+        this.service = service;
+    }
+
     [HttpGet]
     public IActionResult Get()
         => service.RequireTenant(HttpContext, out var tenant)

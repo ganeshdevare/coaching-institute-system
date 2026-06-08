@@ -7,8 +7,15 @@ namespace InstituteService.Controllers;
 
 [ApiController]
 [Route("api/v1/institute")]
-public sealed class StudentsController(IInstituteAppService service) : ControllerBase
+public sealed class StudentsController : ControllerBase
 {
+    private readonly IInstituteAppService service;
+
+    public StudentsController(IInstituteAppService service)
+    {
+        this.service = service;
+    }
+
     [HttpGet("students/enrollments")]
     public IActionResult Enrollments([FromQuery] Guid? batchId, [FromQuery] Guid? studentId)
         => service.RequireTenant(HttpContext, out var tenant)
