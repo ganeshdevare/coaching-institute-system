@@ -69,6 +69,25 @@ public static class SharedApplicationBuilderExtensions
     public static IServiceCollection AddCoachSharedKernel(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
+        services.AddCors(options =>
+        {
+            options.AddPolicy("CoachCors", policy =>
+            {
+                var origins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+                var configuredOrigins = origins
+                    .Where(x => !string.IsNullOrWhiteSpace(x) && !x.Contains("__", StringComparison.Ordinal))
+                    .ToArray();
+
+                if (configuredOrigins.Length > 0)
+                {
+                    policy.WithOrigins(configuredOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+                }
+                else
+                {
+                    policy.AllowAnyHeader().AllowAnyMethod().SetIsOriginAllowed(_ => true).AllowCredentials();
+                }
+            });
+        });
         services.AddSingleton<AppDataStore>();
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
@@ -80,6 +99,7 @@ public static class SharedApplicationBuilderExtensions
     public static IApplicationBuilder UseCoachPlatform(this IApplicationBuilder app)
     {
         app.UseMiddleware<CorrelationIdMiddleware>();
+        app.UseCors("CoachCors");
         app.UseMiddleware<TenantResolutionMiddleware>();
         app.UseMiddleware<JwtAuthenticationMiddleware>();
         app.UseMiddleware<ApiAuditMiddleware>();

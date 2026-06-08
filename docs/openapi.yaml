@@ -72,6 +72,26 @@ paths:
       responses:
         "200":
           description: Institute registered.
+  /api/identity/institutes:
+    get:
+      tags: [Identity]
+      summary: List institutes
+      responses:
+        "200":
+          description: Institute list.
+  /api/identity/users:
+    get:
+      tags: [Identity]
+      summary: List users without sensitive fields
+      parameters:
+        - name: instituteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: User list.
   /api/identity/login:
     post:
       tags: [Identity]
@@ -181,6 +201,14 @@ paths:
         "200":
           description: Tenant resolution result.
   /api/institute/branches:
+    get:
+      tags: [Institute]
+      summary: List branches
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      responses:
+        "200":
+          description: Tenant branches.
     post:
       tags: [Institute]
       summary: Create a branch
@@ -196,6 +224,14 @@ paths:
         "200":
           description: Created branch.
   /api/institute/courses:
+    get:
+      tags: [Institute]
+      summary: List courses
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      responses:
+        "200":
+          description: Tenant courses.
     post:
       tags: [Institute]
       summary: Create a course
@@ -211,6 +247,14 @@ paths:
         "200":
           description: Created course.
   /api/institute/batches:
+    get:
+      tags: [Institute]
+      summary: List batches
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      responses:
+        "200":
+          description: Tenant batches.
     post:
       tags: [Institute]
       summary: Create a batch and optionally assign a teacher
@@ -240,7 +284,44 @@ paths:
       responses:
         "200":
           description: Enrollment created.
+  /api/institute/students/enrollments:
+    get:
+      tags: [Institute]
+      summary: List enrollments
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+        - name: batchId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: studentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Enrollment list.
   /api/institute/guardians:
+    get:
+      tags: [Institute]
+      summary: List guardian mappings
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+        - name: studentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: parentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Guardian mappings.
     post:
       tags: [Institute]
       summary: Map a student to a parent or guardian
@@ -295,6 +376,14 @@ paths:
         "200":
           description: Student, batch, fee, attendance, and recent payment metrics.
   /api/billing/fee-plans:
+    get:
+      tags: [Billing]
+      summary: List fee plans
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      responses:
+        "200":
+          description: Tenant fee plans.
     post:
       tags: [Billing]
       summary: Create a fee plan
@@ -310,6 +399,19 @@ paths:
         "200":
           description: Fee plan created.
   /api/billing/payments:
+    get:
+      tags: [Billing]
+      summary: List payments
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+        - name: studentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Payment list.
     post:
       tags: [Billing]
       summary: Record a payment
@@ -390,6 +492,14 @@ paths:
                 type: string
                 format: binary
   /api/billing/reports:
+    get:
+      tags: [Reports]
+      summary: List report jobs
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      responses:
+        "200":
+          description: Report jobs.
     post:
       tags: [Reports]
       summary: Queue an async report job
@@ -435,6 +545,15 @@ paths:
       responses:
         "200":
           description: Reminder queued.
+  /api/billing/notifications:
+    get:
+      tags: [Billing]
+      summary: List notification history
+      parameters:
+        - $ref: "#/components/parameters/TenantSubdomain"
+      responses:
+        "200":
+          description: Notification history.
 components:
   securitySchemes:
     bearerAuth:
